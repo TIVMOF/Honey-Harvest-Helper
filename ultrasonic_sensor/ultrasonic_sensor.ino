@@ -8,7 +8,7 @@
 RF24 radio(7, 8); // CE, CSN
 
 // The address with which the nRF24L01s recognises the other
-const byte address[6] = "00001";
+const byte address[6] = "TIVMF";
 
 // Defining the ultrasonic sensor pins
 const int triggerPin = 2;
