@@ -178,8 +178,8 @@ void startSpinning() {
       }
     }
 
-    int minutes = (1200000 - (millis() - timeStarted)) / 60000;
-    int seconds = (1200000 - (millis() - timeStarted)) / 1000;
+    unsigned long minutes = (1200000 - (millis() - timeStarted)) / 60000;
+    unsigned long seconds = (1200000 - (millis() - timeStarted)) / 1000;
     
     lcd.setCursor(11, 1);
     lcd.print(minutes);
