@@ -1,14 +1,25 @@
+// Library foor the lcd display
 #include <LiquidCrystal.h>
 
-// Pins used by the motor driver
-int motorPin1 = 2;
-int motorPin2 = 3;
+// Libraries for the nRf24L01
+#include <SPI.h>
+#include <nRF24L01.h>
+#include <RF24.h>
 
-// Pin to control the speed of the motor
-int motorSpeed = 11;
+// Defining the nRF24L01 pins
+// It also uses pins 11, 12, 13 for SPI
+RF24 radio(A3, A4); // CE, CSN
+
+// The address with which the nRF24L01s recognises the other
+const byte address[6] = "TIVMF";
+
+// Pins used by the motor driver
+int enA = 3;
+int in1 = A1;
+int in2 = A2;
 
 // Pin used by the lcd shield keypad
-const int BUTTONS = 0;
+const int BUTTONS = A0;
 
 // Pins used by the shield
 const int pin_d4 = 4;
@@ -23,6 +34,9 @@ LiquidCrystal lcd(pin_RS, pin_EN, pin_d4, pin_d5, pin_d6, pin_d7);
 
 // Parameter for the choice of the user
 int choose = 1;
+
+// The hight at which the motor will stop (in cm)
+int stopHight = 4;
 
 // Function to print the starting menu
 void start() {
@@ -87,33 +101,83 @@ void selectMode() {
 void startSpinning() {
   lcd.clear();
   lcd.setCursor(0, 0);
+
+  String speedText;
   
   // Display the selected option
   if (choose == 1) {
-    lcd.print("Option: Fast");
-
     // Setting the motor at fast speed
-    analogWrite(motorSpeed, 250);
+    analogWrite(enA, 250);
+    speedText = "Fast";
   } 
   
   else if (choose == 2) {
-    lcd.print("Option: Slow");
-
     // Setting the motor at slow speed
-    analogWrite(motorSpeed, 190);
+    analogWrite(enA, 190);
+    speedText = "Slow";
   }
+
+  lcd.print("Option: ");
+  lcd.setCursor(10, 0);
+  lcd.print(speedText);
   
   lcd.setCursor(0, 1);
   lcd.print("Remaining:");
 
   // Starting the action of the motor
-  digitalWrite(motorPin1, HIGH);
-  digitalWrite(motorPin2, LOW);
+  // If you swap the hight and low, you'll change the direction
+  digitalWrite(in1, LOW);
+  digitalWrite(in2, HIGH);
   
   // Start the timer for 20 minutes
   int secRemaining = 20 * 60;
 
   while (secRemaining > 0) {
+
+    Serial.println(A3);
+
+    // Looking for the message if the honey level is too hight
+    if (radio.available()) {
+      int honeyHight = 0;
+      radio.read(&honeyHight, sizeof(honeyHight));
+      
+      // Seeing if the honey level is too hight
+      if(honeyHight <= stopHight){
+        // Stoping the motor
+        //analogWrite(enA, 0);
+
+        // Alerting the user for the honey level
+        lcd.clear();
+        lcd.setCursor(0, 0);
+        lcd.print("Process stopped!");
+        lcd.setCursor(0, 1);
+        lcd.print("Resume -> select");
+
+        // For user input
+        int lcdButtons = 0;
+
+        // Waiting fot the user to resume by clicing select
+        while(lcdButtons < 600 || lcdButtons > 800){
+          lcdButtons = analogRead(BUTTONS);
+        }
+
+        // Resuming the motor action
+        lcd.clear();
+        lcd.print("Option: ");
+        lcd.setCursor(10, 0);
+        lcd.print(speedText);
+
+        analogWrite(enA, 190);
+        
+        lcd.setCursor(0, 1);
+        lcd.print("Remaining:");
+
+        radio.flush_rx();
+
+        honeyHight = 0;
+      }
+    }
+
     int minutes = secRemaining / 60;
     int seconds = secRemaining % 60;
     
@@ -127,6 +191,7 @@ void startSpinning() {
     lcd.print(seconds);
     
     delay(1000);
+
     secRemaining--;
   }
   
@@ -137,17 +202,37 @@ void startSpinning() {
   delay(2000);
 
   // Stoping the motor
-  analogWrite(motorSpeed, 0);
+  analogWrite(enA, 0);
+
+  radio.flush_tx();
 }
 
 void setup() {
   Serial.begin(9600);
+
+  // Starting the lcd shield
   lcd.begin(16, 2);
 
-  pinMode(motorPin1, OUTPUT);
-  pinMode(motorPin2, OUTPUT);
-  
-  pinMode(motorSpeed, OUTPUT);
+  // Setting up the motor pins
+  pinMode(in1, OUTPUT);
+  pinMode(2, OUTPUT);
+  pinMode(enA, OUTPUT);
+
+  // Turn off motor - Initial state
+	digitalWrite(in1, LOW);
+	digitalWrite(in2, LOW);
+
+  // Starting the nRF24L01
+  radio.begin();
+
+  // Oppening a chanel to read from
+  radio.openReadingPipe(1, address);
+
+  // Setting the power level - distance in which the nRF24L01s work
+  radio.setPALevel(RF24_PA_MIN);
+
+  // Prepearing the nRF24L01 to listen
+  radio.startListening();
 }
 
 void loop() {
