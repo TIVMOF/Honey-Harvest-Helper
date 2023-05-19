@@ -167,7 +167,7 @@ void startSpinning() {
         lcd.setCursor(10, 0);
         lcd.print(speedText);
 
-        analogWrite(enA, 190);
+        //analogWrite(enA, 190);
         
         lcd.setCursor(0, 1);
         lcd.print("Remaining:");
