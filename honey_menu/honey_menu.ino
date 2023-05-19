@@ -130,9 +130,9 @@ void startSpinning() {
   digitalWrite(in2, HIGH);
   
   // Start the timer for 20 minutes
-  int secRemaining = 20 * 60;
+  unsigned long timeStarted = millis();
 
-  while (secRemaining > 0) {
+  while (millis() - timeStarted < 1200000) {
 
     Serial.println(A3);
 
@@ -178,8 +178,8 @@ void startSpinning() {
       }
     }
 
-    int minutes = secRemaining / 60;
-    int seconds = secRemaining % 60;
+    int minutes = (1200000 - (millis() - timeStarted)) / 60000;
+    int seconds = (1200000 - (millis() - timeStarted)) / 1000;
     
     lcd.setCursor(11, 1);
     lcd.print(minutes);
@@ -189,10 +189,6 @@ void startSpinning() {
       lcd.print("0");
     }
     lcd.print(seconds);
-    
-    delay(1000);
-
-    secRemaining--;
   }
   
   // Mesage when the time is over
