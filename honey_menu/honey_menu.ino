@@ -33,10 +33,10 @@ const int pin_EN = 9;
 LiquidCrystal lcd(pin_RS, pin_EN, pin_d4, pin_d5, pin_d6, pin_d7);
 
 // Parameter for the choice of the user
-int choose = 1;
+int choose = 0;
 
 // The height at which the motor will stop (in cm)
-int stopHeight = 4;
+int stopHeight = 5;
 
 // Function to print the starting menu
 void start() {
@@ -59,7 +59,9 @@ void setArrow() {
   if (choose == 1) {
     lcd.setCursor(8, 0);
     lcd.print(">");
-  } else if (choose == 2) {
+  } 
+  
+  else if (choose == 2) {
     lcd.setCursor(8, 1);
     lcd.print(">");
   }
@@ -79,12 +81,30 @@ void selectMode() {
     if (lcdButtons > 60 && lcdButtons < 200) {
       choose = 1;
       setArrow();
-    } else if (lcdButtons > 200 && lcdButtons < 400) {
+    } 
+    
+    else if (lcdButtons > 200 && lcdButtons < 400) {
       choose = 2;
       setArrow();
-    } else if (lcdButtons > 600 && lcdButtons < 800) {
-      startSpinning();
-      return;
+    } 
+    
+    else if (lcdButtons > 600 && lcdButtons < 800) {
+      if(choose != 0){
+        startSpinning();
+        return;
+      }
+
+      else{
+        lcd.clear();
+        lcd.setCursor(0, 0);
+        lcd.print("Please select");
+        lcd.setCursor(0, 1);
+        lcd.print("mode first!");
+
+        delay(3000);
+
+        setArrow();
+      }
     }
   }
 }
@@ -95,16 +115,21 @@ void startSpinning() {
   lcd.setCursor(0, 0);
 
   String speedText;
+  unsigned long timeSpam;
 
   // Display the selected option
   if (choose == 1) {
     // Setting the motor at fast speed
-    analogWrite(enA, 250);
+    analogWrite(enA, 200);
     speedText = "Fast";
-  } else if (choose == 2) {
+    timeSpam = 600000;
+  }
+  
+  if (choose == 2) {
     // Setting the motor at slow speed
-    analogWrite(enA, 190);
+    analogWrite(enA, 100);
     speedText = "Slow";
+    timeSpam = 1200000;
   }
 
   lcd.print("Option: ");
@@ -122,7 +147,7 @@ void startSpinning() {
   // Start the timer for 20 minutes
   unsigned long timeStarted = millis();
 
-  while (millis() - timeStarted < 1200000) {
+  while (millis() - timeStarted < timeSpam) {
     // Looking for the message if the honey level is too high
     if (radio.available()) {
       int honeyHeight = 0;
@@ -154,7 +179,15 @@ void startSpinning() {
         lcd.setCursor(10, 0);
         lcd.print(speedText);
 
-        analogWrite(enA, 190);
+        if (choose == 1) {
+          // Setting the motor at fast speed
+          analogWrite(enA, 200);
+        } 
+        
+        else if (choose == 2) {
+          // Setting the motor at slow speed
+          analogWrite(enA, 100);
+        }
 
         lcd.setCursor(0, 1);
         lcd.print("Remaining:");
@@ -165,8 +198,8 @@ void startSpinning() {
       }
     }
 
-    unsigned long minutes = (1200000 - (millis() - timeStarted)) / 60000;
-    unsigned long seconds = ((1200000 - (millis() - timeStarted)) / 1000) % 60;
+    unsigned long minutes = (timeSpam - (millis() - timeStarted)) / 60000;
+    unsigned long seconds = ((timeSpam - (millis() - timeStarted)) / 1000) % 60;
 
     lcd.setCursor(11, 1);
     lcd.print(minutes);
@@ -176,6 +209,7 @@ void startSpinning() {
       lcd.print("0");
     }
     lcd.print(seconds);
+    lcd.print(" ");
   }
 
   // Message when the time is over
@@ -186,13 +220,15 @@ void startSpinning() {
 
   // Stopping the motor
   analogWrite(enA, 0);
+  digitalWrite(in1, LOW);
+  digitalWrite(in2, LOW);
 
   radio.flush_tx();
+
+  choose = 0;
 }
 
 void setup() {
-  Serial.begin(9600);
-
   // Starting the LCD shield
   lcd.begin(16, 2);
 
