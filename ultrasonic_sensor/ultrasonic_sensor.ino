@@ -14,9 +14,6 @@ const byte address[6] = "TIVMF";
 const int triggerPin = 2;
 const int echoPin = 3;
 
-// Hight at which the sensor trigers
-int triggerHight = 4;
-
 void setup() {
   // Starting the nRF24L01
   radio.begin();
@@ -59,12 +56,8 @@ void loop(){
   // because the distace = traveling to + going back
   cm = microsecondsToCentimeters(duration) / 2;
 
-  // When water level is close eneogh
-  // a message is passed to the main part
-  if(cm <= triggerHight){
-    const char text[] = "Hello World";
-    radio.write(&text, sizeof(text));
-  }
+  //Sending the cm to the other part
+  radio.write(&cm, sizeof(cm));
 
   delay(1000);
 }
